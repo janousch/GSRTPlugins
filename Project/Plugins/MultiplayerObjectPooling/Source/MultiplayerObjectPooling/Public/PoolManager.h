@@ -5,7 +5,7 @@
 #include "CoreMinimal.h"
 #include "GameFramework/Actor.h"
 #include "PoolHolder.h"
-#include "APoolManager.generated.h"
+#include "PoolManager.generated.h"
 
 
 UENUM(BlueprintType)
@@ -14,26 +14,29 @@ enum class EBranch : uint8 {
 	Failed		UMETA(DisplayName="Failed")
 };
 
-UCLASS(Abstract)
-class AAPoolManager : public AActor
+UCLASS()
+class APoolManager : public AActor
 {
 	GENERATED_BODY()
 	
 public:
 
 	// Instance for this singleton
-	static AAPoolManager* Instance;
+	static APoolManager* Instance;
 
 	TMap<FString, APoolHolder*> ClassNamesToPools;
 
 	// Sets default values for this actor's properties
-	AAPoolManager();
+	APoolManager();
 
 	UFUNCTION(BlueprintCallable, Category = "Object Pool", Meta = (ToolTip = "Get a single object from the pool", DeterminesOutputType = "Class", Keywords = "Get Pool"))
 		static UObject* GetFromPool(TSubclassOf<UObject> Class);
 
 	UFUNCTION(BlueprintCallable, Category = "Object Pool|Multiplayer", Meta = (ToolTip = "Get a specific object from the pool by its name", DeterminesOutputType = "Class", Keywords = "Pool Specific Name String"))
 		static UObject* GetSpecificFromPool(TSubclassOf<UObject> Class, FString ObjectName);
+
+	UFUNCTION(BlueprintCallable, Category = "Object Pool", Meta = (ToolTip = "Get a specific object from the pool by its name, if the object isn't available the function will return a random object from the pool", DeterminesOutputType = "Class", Keywords = "Pool Specific Name String"))
+		static UObject* TryToGetSpecificFromPool(TSubclassOf<UObject> Class, FString ObjectName);
 
 	UFUNCTION(BlueprintCallable, Category = "Object Pool", Meta = (ToolTip = "Get a variable number of objects from the pool", DeterminesOutputType = "Class", Keywords = "X Amount Number Quantity Pool"))
 		static TArray<UObject*> GetXFromPool(TSubclassOf<UObject> Class, int32 Quantity = 10);
@@ -46,6 +49,9 @@ public:
 
 	UFUNCTION(BlueprintCallable, Category = "Object Pool|Multiplayer", Meta = (AdvancedDisplay = "PoolOwner,PoolInstigator", ToolTip = "Use this function like SpawnActor, but instead of creating a new actor it will take an unused one from the pool", DeterminesOutputType = "Class", ExpandEnumAsExecs = "Branch", Keywords = "Spawn Pool Get Multiplayer Network"))
 		static AActor* SpawnSpecificActorFromPool(TSubclassOf<AActor> Class, FString ObjectName, FTransform SpawnTransform, UPARAM(DisplayName = "Owner") AActor* PoolOwner, UPARAM(DisplayName = "Instigator") APawn* PoolInstigator, EBranch& Branch);
+
+	UFUNCTION(BlueprintCallable, Category = "Object Pool", Meta = (AdvancedDisplay = "PoolOwner,PoolInstigator", ToolTip = "If the specified actor is not available this function will return a random actor of the given class", DeterminesOutputType = "Class", ExpandEnumAsExecs = "Branch", Keywords = "Spawn Pool Get Multiplayer Network"))
+		static AActor* TryToSpawnSpecificActorFromPool(TSubclassOf<AActor> Class, FString ObjectName, FTransform SpawnTransform, UPARAM(DisplayName = "Owner") AActor* PoolOwner, UPARAM(DisplayName = "Instigator") APawn* PoolInstigator, EBranch& Branch);
 
 	UFUNCTION(BlueprintCallable, Category = "Object Pool", Meta = (DefaultToSelf = "Object", ToolTip = "Put an used object back to the pool", Keywords = "Return Back Pool"))
 		static void ReturnToPool(UObject* Object, const EEndPlayReason::Type EndPlayReason = EEndPlayReason::Destroyed);

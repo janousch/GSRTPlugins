@@ -1,21 +1,21 @@
 // Copyright 2019 (C) Ramón Janousch
 
-#include "APoolManager.h"
+#include "PoolManager.h"
 #include "Engine.h"
 #include "Kismet/KismetSystemLibrary.h"
 #include "PoolHolder.h"
 
-AAPoolManager* AAPoolManager::Instance;
+APoolManager* APoolManager::Instance;
 
 // Sets default values
-AAPoolManager::AAPoolManager()
+APoolManager::APoolManager()
 {
  	// Set this actor to call Tick() every frame.  You can turn this off to improve performance if you don't need it.
 	PrimaryActorTick.bCanEverTick = false;
 }
 
 // Called when the game starts or when spawned
-void AAPoolManager::BeginPlay()
+void APoolManager::BeginPlay()
 {
 	Instance = this;
 	InitializePools();
@@ -24,7 +24,7 @@ void AAPoolManager::BeginPlay()
 	Super::BeginPlay();
 }
 
-UObject* AAPoolManager::GetFromPool(TSubclassOf<UObject> Class) {
+UObject* APoolManager::GetFromPool(TSubclassOf<UObject> Class) {
 	APoolHolder* PoolHolder;
 	if (GetPoolHolder(Class, PoolHolder)) {
 		if (PoolHolder->IsValidLowLevelFast()) {
@@ -35,7 +35,7 @@ UObject* AAPoolManager::GetFromPool(TSubclassOf<UObject> Class) {
 	return nullptr;
 }
 
-UObject* AAPoolManager::GetSpecificFromPool(TSubclassOf<UObject> Class, FString ObjectName) {
+UObject* APoolManager::GetSpecificFromPool(TSubclassOf<UObject> Class, FString ObjectName) {
 	APoolHolder* PoolHolder;
 	if (GetPoolHolder(Class, PoolHolder)) {
 		if (PoolHolder->IsValidLowLevelFast()) {
@@ -46,7 +46,14 @@ UObject* AAPoolManager::GetSpecificFromPool(TSubclassOf<UObject> Class, FString 
 	return nullptr;
 }
 
-bool AAPoolManager::GetPoolHolder(TSubclassOf<UObject> Class, APoolHolder*& PoolHolder) {
+UObject* APoolManager::TryToGetSpecificFromPool(TSubclassOf<UObject> Class, FString ObjectName) {
+	UObject* PoolObject = GetSpecificFromPool(Class, ObjectName);
+	if (PoolObject->IsValidLowLevelFast()) return PoolObject;
+
+	return GetFromPool(Class);
+}
+
+bool APoolManager::GetPoolHolder(TSubclassOf<UObject> Class, APoolHolder*& PoolHolder) {
 	if (Class) {
 		if (IsPoolManagerReady()) {
 			FString Key = Class->GetName();
@@ -65,7 +72,7 @@ bool AAPoolManager::GetPoolHolder(TSubclassOf<UObject> Class, APoolHolder*& Pool
 	return false;
 }
 
-TArray<UObject*> AAPoolManager::GetXFromPool(TSubclassOf<UObject> Class, int32 Quantity) {
+TArray<UObject*> APoolManager::GetXFromPool(TSubclassOf<UObject> Class, int32 Quantity) {
 	TArray<UObject*> Objects;
 	for (int i = 0; i < Quantity; i++) {
 		UObject* Object = GetFromPool(Class);
@@ -77,7 +84,7 @@ TArray<UObject*> AAPoolManager::GetXFromPool(TSubclassOf<UObject> Class, int32 Q
 	return Objects;
 }
 
-TArray<UObject*> AAPoolManager::GetAllFromPool(TSubclassOf<UObject> Class) {
+TArray<UObject*> APoolManager::GetAllFromPool(TSubclassOf<UObject> Class) {
 	APoolHolder* PoolHolder;
 	if (GetPoolHolder(Class, PoolHolder)) {
 		if (PoolHolder->IsValidLowLevelFast()) {
@@ -88,7 +95,7 @@ TArray<UObject*> AAPoolManager::GetAllFromPool(TSubclassOf<UObject> Class) {
 	return TArray<UObject*>();
 }
 
-AActor* AAPoolManager::SpawnSpecificActorFromPool(TSubclassOf<AActor> Class, FString ObjectName, FTransform SpawnTransform, AActor* PoolOwner, APawn* PoolInstigator, EBranch& Branch) {
+AActor* APoolManager::SpawnSpecificActorFromPool(TSubclassOf<AActor> Class, FString ObjectName, FTransform SpawnTransform, AActor* PoolOwner, APawn* PoolInstigator, EBranch& Branch) {
 	if (Class) {
 		AActor* UnusedActor = (AActor*)GetSpecificFromPool(Class, ObjectName);
 		if (!IsValid(UnusedActor)) {
@@ -109,7 +116,17 @@ AActor* AAPoolManager::SpawnSpecificActorFromPool(TSubclassOf<AActor> Class, FSt
 	return NULL;
 }
 
-AActor* AAPoolManager::SpawnActorFromPool(TSubclassOf<AActor> Class, FTransform SpawnTransform, AActor* PoolOwner, APawn* PoolInstigator, EBranch& Branch) {
+AActor* APoolManager::TryToSpawnSpecificActorFromPool(TSubclassOf<AActor> Class, FString ObjectName, FTransform SpawnTransform, AActor* PoolOwner, APawn* PoolInstigator, EBranch& Branch) {
+	AActor* PoolActor = SpawnSpecificActorFromPool(Class, ObjectName, SpawnTransform, PoolOwner, PoolInstigator, Branch);
+	if (PoolActor->IsValidLowLevelFast()) {
+		Branch = EBranch::Success;
+		return PoolActor;
+	}
+
+	return SpawnActorFromPool(Class, SpawnTransform, PoolOwner, PoolInstigator, Branch);
+}
+
+AActor* APoolManager::SpawnActorFromPool(TSubclassOf<AActor> Class, FTransform SpawnTransform, AActor* PoolOwner, APawn* PoolInstigator, EBranch& Branch) {
 	if (Class) {
 		AActor* UnusedActor = (AActor*) GetFromPool(Class);
 		if (!IsValid(UnusedActor)) {
@@ -130,7 +147,7 @@ AActor* AAPoolManager::SpawnActorFromPool(TSubclassOf<AActor> Class, FTransform 
 	return NULL;
 }
 
-void AAPoolManager::InitializePools() {
+void APoolManager::InitializePools() {
 	DestroyAllPools();
 
 	for (auto& PoolSpecification : DesiredPools) {
@@ -138,14 +155,14 @@ void AAPoolManager::InitializePools() {
 	}
 }
 
-void AAPoolManager::ReturnToPool(UObject* Object, const EEndPlayReason::Type EndPlayReason) {
+void APoolManager::ReturnToPool(UObject* Object, const EEndPlayReason::Type EndPlayReason) {
 	APoolHolder* PoolHolder;
 	if (!GetPoolHolder(Object->GetClass(), PoolHolder)) return;
 	if (!IsValid(PoolHolder)) return;
 	PoolHolder->ReturnObject(Object, EndPlayReason);
 }
 
-void AAPoolManager::EmptyObjectPool(TSubclassOf<UObject> Class) {
+void APoolManager::EmptyObjectPool(TSubclassOf<UObject> Class) {
 	if (Class) {
 		if (!IsValid(Instance)) return;
 		if (Instance->ClassNamesToPools.Num() == 0) return;
@@ -160,7 +177,12 @@ void AAPoolManager::EmptyObjectPool(TSubclassOf<UObject> Class) {
 	}
 }
 
-void AAPoolManager::InitializeObjectPool(FPoolSpecification PoolSpecification) {
+void APoolManager::InitializeObjectPool(FPoolSpecification PoolSpecification) {
+	if (!IsValid(Instance)) {
+		UE_LOG(LogTemp, Error, TEXT("Please spawn a PoolManager"));
+		return;
+	}
+
 	APoolHolder* PoolHolder = Instance->GetWorld()->SpawnActor<APoolHolder>(APoolHolder::StaticClass(), Instance->GetTransform());
 	PoolHolder->AttachToActor(Instance, FAttachmentTransformRules::KeepWorldTransform);
 
@@ -168,7 +190,7 @@ void AAPoolManager::InitializeObjectPool(FPoolSpecification PoolSpecification) {
 	Instance->ClassNamesToPools.Add(PoolSpecification.Class->GetName(), PoolHolder);
 }
 
-FString AAPoolManager::GetObjectName(UObject* Object) {
+FString APoolManager::GetObjectName(UObject* Object) {
 	if (!Object->IsValidLowLevelFast()) return "None";
 
 	FString FullName = Object->GetFullName();
@@ -179,7 +201,7 @@ FString AAPoolManager::GetObjectName(UObject* Object) {
 	return Name;
 }
 
-int32 AAPoolManager::GetNumberOfUsedObjects(TSubclassOf<UObject> Class) {
+int32 APoolManager::GetNumberOfUsedObjects(TSubclassOf<UObject> Class) {
 	APoolHolder* PoolHolder;
 	if (!GetPoolHolder(Class, PoolHolder)) return -1;
 	if (!IsValid(PoolHolder)) return -1;
@@ -187,7 +209,7 @@ int32 AAPoolManager::GetNumberOfUsedObjects(TSubclassOf<UObject> Class) {
 	return PoolHolder->GetNumberOfUsedObjects();
 }
 
-int32 AAPoolManager::GetNumberOfAvailableObjects(TSubclassOf<UObject> Class) {
+int32 APoolManager::GetNumberOfAvailableObjects(TSubclassOf<UObject> Class) {
 	APoolHolder* PoolHolder;
 	if (!GetPoolHolder(Class, PoolHolder)) return -1;
 	if (!IsValid(PoolHolder)) return -1;
@@ -195,7 +217,7 @@ int32 AAPoolManager::GetNumberOfAvailableObjects(TSubclassOf<UObject> Class) {
 	return PoolHolder->GetNumberOfAvailableObjects();
 }
 
-bool AAPoolManager::IsObjectActive(UObject* Object) {
+bool APoolManager::IsObjectActive(UObject* Object) {
 	AActor* Actor = Cast<AActor>(Object);
 	if (Actor->IsValidLowLevelFast()) {
 		AActor* AttachedTo = Actor->GetAttachParentActor();
@@ -215,13 +237,13 @@ bool AAPoolManager::IsObjectActive(UObject* Object) {
 	return false;
 }
 
-bool AAPoolManager::ContainsClass(TSubclassOf<UObject> Class) {
+bool APoolManager::ContainsClass(TSubclassOf<UObject> Class) {
 	if (!Class) return false;
 	FString Key = Class->GetName();
 	return Instance->ClassNamesToPools.Contains(Key);
 }
 
-void AAPoolManager::DestroyAllPools() {
+void APoolManager::DestroyAllPools() {
 	TArray<APoolHolder*> Pools;
 	ClassNamesToPools.GenerateValueArray(Pools);
 
@@ -236,7 +258,7 @@ void AAPoolManager::DestroyAllPools() {
 	}
 }
 
-bool AAPoolManager::IsPoolManagerReady() {
+bool APoolManager::IsPoolManagerReady() {
 	if (!IsValid(Instance)) return false;
 	if (Instance->ClassNamesToPools.Num() == 0) return false;
 	if (!Instance->bIsReady) return false;
