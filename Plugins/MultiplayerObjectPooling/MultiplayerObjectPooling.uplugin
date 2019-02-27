@@ -1,0 +1,23 @@
+{
+	"FileVersion": 3,
+	"Version": 1,
+	"VersionName": "1.0",
+	"FriendlyName": "MultiplayerObjectPooling",
+	"Description": "Object Pooling for multiplayer games, originally created for the GameSparks Realtime Service.",
+	"Category": "Other",
+	"CreatedBy": "Ramon Janousch",
+	"CreatedByURL": "",
+	"DocsURL": "",
+	"MarketplaceURL": "",
+	"SupportURL": "",
+	"CanContainContent": true,
+	"IsBetaVersion": false,
+	"Installed": false,
+	"Modules": [
+		{
+			"Name": "MultiplayerObjectPooling",
+			"Type": "Developer",
+			"LoadingPhase": "Default"
+		}
+	]
+}
