@@ -14,10 +14,15 @@
 	"IsBetaVersion": false,
 	"Installed": false,
 	"Modules": [
-		{
-			"Name": "MultiplayerObjectPooling",
-			"Type": "Developer",
-			"LoadingPhase": "Default"
-		}
+	  {
+		  "Name": "MultiplayerObjectPooling",
+		  "Type": "Runtime",
+		  "LoadingPhase": "PreDefault"
+	  },
+	  {
+		  "Name": "MultiplayerObjectPoolingEditor",
+		  "Type": "Developer",
+		  "LoadingPhase": "Default"
+	  }
 	]
 }

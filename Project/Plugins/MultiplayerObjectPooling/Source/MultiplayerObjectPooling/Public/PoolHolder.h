@@ -122,6 +122,9 @@ private:
 
 	// This is only used when the object has a life span and triggers the return to pool function when the object dies
 	TMap<UObject*, FTimerHandle> ObjectsToTimers;
+
+	// Necessary for the objects which are getting deactivated but don't call the interface function PoolableEndPlay
+	bool bIsPoolHolderInitialized = false;
 	
 	/* 
 	* Activate or deactivate the object. On activation it will restore the default values

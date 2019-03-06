@@ -93,7 +93,7 @@ void APoolHolder::SetObjectActive(UObject* Object, bool bIsActive, const EEndPla
 		Actor->SetActorTickEnabled(bIsActive && DefaultObjectSettings.bStartWithTickEnabled);
 	}
 
-	if (DefaultObjectSettings.bImplementsPoolableInterface) {
+	if (DefaultObjectSettings.bImplementsPoolableInterface && bIsPoolHolderInitialized) {
 		if (bIsActive) {
 			IPoolableInterface::Execute_PoolableBeginPlay(Object);
 		}
@@ -153,6 +153,7 @@ void APoolHolder::RestoreActorSettings(AActor* Actor) {
 }
 
 void APoolHolder::InitializePool(FPoolSpecification PoolSpecification) {
+	bIsPoolHolderInitialized = false;
 	TSubclassOf<UObject> Class = PoolSpecification.Class;
 	int32 NumberOfObjects = PoolSpecification.NumberOfObjects;
 
@@ -212,6 +213,8 @@ void APoolHolder::InitializePool(FPoolSpecification PoolSpecification) {
 			}
 		}
 	}
+
+	bIsPoolHolderInitialized = true;
 }
 
 int32 APoolHolder::GetNumberOfUsedObjects() {

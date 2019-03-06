@@ -14,6 +14,8 @@ enum class EBranch : uint8 {
 	Failed		UMETA(DisplayName="Failed")
 };
 
+DECLARE_DYNAMIC_MULTICAST_DELEGATE(FInitializedPoolManager);
+
 UCLASS()
 class APoolManager : public AActor
 {
@@ -24,12 +26,21 @@ public:
 	// Instance for this singleton
 	static APoolManager* Instance;
 
+	UPROPERTY(BlueprintAssignable)
+		FInitializedPoolManager OnInitialized;
+
 	TMap<FString, APoolHolder*> ClassNamesToPools;
 
 	// Sets default values for this actor's properties
 	APoolManager();
 
-	UFUNCTION(BlueprintCallable, Category = "Object Pool", Meta = (ToolTip = "Get a single object from the pool", DeterminesOutputType = "Class", Keywords = "Get Pool"))
+	//UFUNCTION(BlueprintCallable, Meta = (WorldContext = "WorldContextObject", FriendlyName = "PoolTest", BlueprintInternalUseOnly = "true"))
+		//static class AActor* PoolTestRealName(UObject* WorldContextObject, TSubclassOf<class AActor> ActorClass);
+
+	UFUNCTION(BlueprintCallable, Category = "Object Pool", Meta = (ToolTip = "Get the singleton instance of the pool manager"))
+		static APoolManager* GetPoolManager();
+
+	UFUNCTION(BlueprintCallable, Category = "Object Pool", Meta = (CustomStructureParam = "OptionalConstructionInformations", ToolTip = "Get a single object from the pool", DeterminesOutputType = "Class", Keywords = "Get Pool"))
 		static UObject* GetFromPool(TSubclassOf<UObject> Class);
 
 	UFUNCTION(BlueprintCallable, Category = "Object Pool|Multiplayer", Meta = (ToolTip = "Get a specific object from the pool by its name", DeterminesOutputType = "Class", Keywords = "Pool Specific Name String"))
@@ -59,8 +70,8 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "Object Pool", Meta = (ToolTip = "Clear a specific pool", Keywords = "Empty Clear Pool Destroy"))
 		static void EmptyObjectPool(TSubclassOf<UObject> Class);
 
-	UFUNCTION(BlueprintCallable, Category = "Object Pool", Meta = (ToolTip = "Create a new object pool. If you pass a class with an existing pool this will destroy all elements of the existing pool!", Keywords = "Init Create Start Pool"))
-		static void InitializeObjectPool(FPoolSpecification PoolSpecification);
+	//UFUNCTION(BlueprintCallable, Category = "Object Pool", Meta = (ToolTip = "Create a new object pool. If you pass a class with an existing pool this will destroy all elements of the existing pool!", Keywords = "Init Create Start Pool"))
+		//static void InitializeObjectPool(FPoolSpecification PoolSpecification);
 
 	UFUNCTION(BlueprintPure, Category = "Object Pool|Multiplayer", Meta = (ToolTip = "Get the name of the object for the function 'GetSpecificFromPool'", DefaultToSelf = "Object", Keywords = "Object Pool"))
 		static FString GetObjectName(UObject* Object);
@@ -89,9 +100,11 @@ private:
 	UPROPERTY(EditAnywhere)
 		TArray<FPoolSpecification> DesiredPools;
 
-	bool bIsReady;
+	bool bIsReady = false;
 
 	void DestroyAllPools();
+
+	static void InitializeObjectPool(FPoolSpecification PoolSpecification);
 
 	/*
 	* Return false if the PoolManager doesn't contain the specific poolholder

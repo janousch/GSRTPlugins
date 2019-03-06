@@ -34,4 +34,11 @@ public:
 	*/
 	UFUNCTION(BlueprintCallable, BlueprintImplementableEvent, Category = "Object Pool", Meta = (Tooltip = "Use this function instead of EndPlay"))
 		void PoolableEndPlay(const EEndPlayReason::Type EndPlayReason);
+
+	/*
+	* Gets called when the object is pulled out from the pool and construction informations are provided
+	* @param EndPlayReason
+	*/
+	UFUNCTION(BlueprintCallable, BlueprintImplementableEvent, Category = "Object Pool", Meta = (CustomStructureParam = "ConstructionInformations", Tooltip = "Use this function instead of ConstructionBlueprint"))
+		void PoolableConstruction();
 };

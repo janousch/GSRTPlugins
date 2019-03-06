@@ -12,23 +12,50 @@ APoolManager::APoolManager()
 {
  	// Set this actor to call Tick() every frame.  You can turn this off to improve performance if you don't need it.
 	PrimaryActorTick.bCanEverTick = false;
+
+	// Add a root component to stick the pool on the pool manager
+	RootComponent = CreateDefaultSubobject<USceneComponent>(TEXT("RootComponent"));
 }
 
 // Called when the game starts or when spawned
 void APoolManager::BeginPlay()
 {
 	Instance = this;
-	InitializePools();
-	bIsReady = true;
-
 	Super::BeginPlay();
+	InitializePools();
+}
+
+/*
+class AActor* APoolManager::PoolTestRealName(UObject* WorldContextObject, TSubclassOf<class AActor> ActorClass) {
+	return Cast<AActor>(NewObject<UObject>((UObject*)GetTransientPackage(), ActorClass));
+}
+
+template< class T >
+T* CreateDataItem(APlayerController* OwningPlayer, UClass* UserWidgetClass)
+{
+	if (!UserWidgetClass->IsChildOf(UGISItemData::StaticClass()))
+	{
+		return nullptr;
+	}
+
+	// Assign the outer to the game instance if it exists, otherwise use the player controller's world
+	UWorld* World = OwningPlayer->GetWorld();
+	StaticCast<UObject*>(World);
+	UGISItemData* NewWidget = NewObject<UObject>((UObject*)GetTransientPackage(), Test);
+	return Cast<T>(NewWidget);
+}
+*/
+
+APoolManager* APoolManager::GetPoolManager() {
+	return Instance;
 }
 
 UObject* APoolManager::GetFromPool(TSubclassOf<UObject> Class) {
 	APoolHolder* PoolHolder;
 	if (GetPoolHolder(Class, PoolHolder)) {
 		if (PoolHolder->IsValidLowLevelFast()) {
-			return PoolHolder->GetUnused();
+			UObject* UnusedObject = PoolHolder->GetUnused();
+			return UnusedObject;
 		}
 	}
 
@@ -153,6 +180,9 @@ void APoolManager::InitializePools() {
 	for (auto& PoolSpecification : DesiredPools) {
 		InitializeObjectPool(PoolSpecification);
 	}
+
+	bIsReady = true;
+	OnInitialized.Broadcast();
 }
 
 void APoolManager::ReturnToPool(UObject* Object, const EEndPlayReason::Type EndPlayReason) {
