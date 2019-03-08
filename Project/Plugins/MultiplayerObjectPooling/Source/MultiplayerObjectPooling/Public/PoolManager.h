@@ -77,7 +77,7 @@ public:
 		static APoolManager* GetPoolManager();
 
 	//UFUNCTION(BlueprintCallable, Category = "Object Pool", Meta = (ToolTip = "Get a single object from the pool", DeterminesOutputType = "Class", Keywords = "Get Pool"))
-		static UObject* GetFromPool(TSubclassOf<UObject> Class);
+		static UObject* GetFromPool(TSubclassOf<UObject> Class, FSpawnParameter SpawnParameter, FSpecificSearch SpecificSearch);
 
 	UFUNCTION(BlueprintCallable, Category = "Object Pool", Meta = (AdvancedDisplay = "PoolOwner,PoolInstigator,SpawnParameter,SpecificSearch", ToolTip = "Use this function like SpawnActor, but instead of creating a new actor it will take an unused one from the pool", DeterminesOutputType = "Class", ExpandEnumAsExecs = "Branch", Keywords = "Spawn Pool Get"))
 		static AActor* SpawnActorFromPool(TSubclassOf<AActor> Class, FTransform SpawnTransform, UPARAM(DisplayName = "Owner") AActor* PoolOwner, UPARAM(DisplayName = "Instigator") APawn* PoolInstigator, EBranch& Branch, FSpawnParameter SpawnParameter, FSpecificSearch SpecificSearch);

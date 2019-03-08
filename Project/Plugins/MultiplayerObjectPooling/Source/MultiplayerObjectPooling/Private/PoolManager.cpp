@@ -40,7 +40,7 @@ AActor* APoolManager::BeginDeferredSpawnFromPool(const UObject* WorldContextObje
 		//ObjectPool->InitializeObjectPool(); 
 	//}
 	//AActor* DeferredSpawn = ObjectPool->GetInactiveObject();
-	AActor* DeferredSpawn = Cast<AActor>(GetFromPool(Class));
+	AActor* DeferredSpawn = Cast<AActor>(GetFromPool(Class, FSpawnParameter(), FSpecificSearch()));
 
 	if (DeferredSpawn == nullptr) {// && Settings->InstantiateOnDemand) {
 		//DeferredSpawn = Instance->GetWorld()->SpawnActorDeferred<AActor>(Class, SpawnTransform, Owner, ObjectPool->GetOwner()->GetInstigator(), CollisionHandlingOverride);
@@ -91,16 +91,47 @@ AActor* APoolManager::FinishDeferredSpawnFromPool(AActor* Actor, const FTransfor
 }
 
 
-UObject* APoolManager::GetFromPool(TSubclassOf<UObject> Class) {
+UObject* APoolManager::GetFromPool(TSubclassOf<UObject> Class, FSpawnParameter SpawnParameter, FSpecificSearch SpecificSearch) {
 	APoolHolder* PoolHolder;
 	if (GetPoolHolder(Class, PoolHolder)) {
 		if (PoolHolder->IsValidLowLevelFast()) {
-			UObject* UnusedObject = PoolHolder->GetUnused();
-			//return PoolHolder->GetSpecific(ObjectName);
+			FString SpecificActor = SpecificSearch.SpecificActor;
+			bool bReturnSpecificActor = SpecificActor.Len() > 0;
+
+			UObject* UnusedObject;
+			if (bReturnSpecificActor) {
+				UnusedObject = PoolHolder->GetSpecific(SpecificActor);
+
+				if (SpecificSearch.HandleNoSpecificFound == EHandleNoSpecificFound::NEXT_FREE && !UnusedObject->IsValidLowLevelFast()) {
+					UnusedObject = PoolHolder->GetUnused();
+				}
+			}
+			else {
+				UnusedObject = PoolHolder->GetUnused();
+			}
+
+			if (!UnusedObject->IsValidLowLevelFast()) {
+				if (SpawnParameter.HandleEmptyPool == EHandleEmptyPool::CREATE) {
+					if (Class->IsChildOf(AActor::StaticClass())) {
+						return Instance->GetWorld()->SpawnActor(Class);
+					}
+					else {
+						return NewObject<UObject>((UObject*)GetTransientPackage(), Class);
+					}
+				}
+				else if (SpawnParameter.HandleEmptyPool == EHandleEmptyPool::CREATE_AND_ADD) {
+					return PoolHolder->GetNew();
+				}
+			}
+
+			if (SpawnParameter.bSetActive) {
+				PoolHolder->SetObjectActive(UnusedObject);
+			}
+
 			return UnusedObject;
 		}
 	}
-
+	
 	return nullptr;
 }
 
@@ -126,7 +157,7 @@ bool APoolManager::GetPoolHolder(TSubclassOf<UObject> Class, APoolHolder*& PoolH
 TArray<UObject*> APoolManager::GetXFromPool(TSubclassOf<UObject> Class, int32 Quantity) {
 	TArray<UObject*> Objects;
 	for (int i = 0; i < Quantity; i++) {
-		UObject* Object = GetFromPool(Class);
+		UObject* Object = GetFromPool(Class, FSpawnParameter(), FSpecificSearch());
 		if (Object->IsValidLowLevelFast()) break;
 		
 		Objects.Add(Object);
@@ -159,10 +190,11 @@ void APoolManager::SetPoolObjectActive(UObject* Object, bool bSetActive) {
 
 AActor* APoolManager::SpawnActorFromPool(TSubclassOf<AActor> Class, FTransform SpawnTransform, AActor* PoolOwner, APawn* PoolInstigator, EBranch& Branch, FSpawnParameter SpawnParameter, FSpecificSearch SpecificSearch) {
 	if (Class) {
-		AActor* UnusedActor = (AActor*) GetFromPool(Class);
-		if (!IsValid(UnusedActor)) {
+		AActor* UnusedActor = Cast<AActor>(GetFromPool(Class, SpawnParameter, SpecificSearch));
+
+		if (!UnusedActor->IsValidLowLevelFast()) {
 			Branch = EBranch::Failed;
-			return NULL;
+			return nullptr;
 		}
 
 		UnusedActor->SetActorTransform(SpawnTransform, false, nullptr, ETeleportType::TeleportPhysics);
@@ -175,7 +207,7 @@ AActor* APoolManager::SpawnActorFromPool(TSubclassOf<AActor> Class, FTransform S
 
 	UE_LOG(LogTemp, Error, TEXT("Pass a valid class in SpawnActorFromPool which inherits from Actor!"));
 	Branch = EBranch::Failed;
-	return NULL;
+	return nullptr;
 }
 
 void APoolManager::InitializePools() {

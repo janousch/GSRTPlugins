@@ -28,6 +28,7 @@ public:
 	// Object Settings
 
 	bool bImplementsPoolableInterface;
+	UClass* Class;
 
 	// Actor Settings
 
@@ -83,6 +84,9 @@ public:
 	// Get an unused object from the pool
 	UObject* GetUnused();
 
+	// Creates a new instance for the object and returns it
+	UObject* GetNew();
+
 	// Get all unused objects from the pool
 	TArray<UObject*> GetAllUnused();
 
@@ -119,7 +123,7 @@ private:
 
 	// Contains all available object names
 	UPROPERTY(EditAnywhere)
-	TArray<FString> AvailableObjects;
+		TArray<FString> AvailableObjects;
 
 	// Saves the default object settings to restore them, when the object is pulled from the pool
 	FDefaultObjectSettings DefaultObjectSettings;
@@ -132,13 +136,6 @@ private:
 
 	// Necessary for the objects which are getting deactivated but don't call the interface function PoolableEndPlay
 	bool bIsPoolHolderInitialized = false;
-
-	/*
-	* Get the specific object, set it active but don't remove it from the AvailableObjects array.
-	* @param ObjectName
-	* @return The specific Object
-	*/
-	UObject* GetSpecificAndSetActive(FString ObjectName);
 
 	void RestoreActorSettings(AActor* Actor);
 

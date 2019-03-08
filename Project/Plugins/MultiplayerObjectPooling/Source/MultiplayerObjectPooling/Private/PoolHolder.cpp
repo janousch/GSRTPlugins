@@ -27,7 +27,7 @@ void APoolHolder::Add(UObject* Object) {
 
 UObject* APoolHolder::GetUnused() {
 	if (AvailableObjects.Num() > 0) {
-		UObject* UnusedObject = GetSpecificAndSetActive(AvailableObjects[0]);
+		UObject* UnusedObject = GetSpecific(AvailableObjects[0]);
 		AvailableObjects.RemoveAt(0);
 
 		return UnusedObject;
@@ -37,17 +37,32 @@ UObject* APoolHolder::GetUnused() {
 	}
 }
 
+UObject* APoolHolder::GetNew() {
+	if (DefaultObjectSettings.bIsActor) {
+		AActor* NewActor = GetWorld()->SpawnActor(DefaultObjectSettings.Class);
+		Add(NewActor);
+	}
+	else {
+		Add(NewObject<UObject>((UObject*)GetTransientPackage(), DefaultObjectSettings.Class));
+	}
+
+	return GetUnused();
+}
+
 TArray<UObject*> APoolHolder::GetAllUnused() {
 	TArray<UObject*> Objects;
 	for (int i = 0; i < AvailableObjects.Num(); i++) {
-		Objects.Add(GetSpecificAndSetActive(AvailableObjects[i]));
+		Objects.Add(GetSpecific(AvailableObjects[i]));
 	}
 	AvailableObjects.Empty();
 
 	return Objects;
 }
 
-UObject* APoolHolder::GetSpecificAndSetActive(FString ObjectName) {
+UObject* APoolHolder::GetSpecific(FString ObjectName) {
+	// TODO: Bad performance, find a better way
+	AvailableObjects.Remove(ObjectName);
+
 	UObject** ObjectFromPool = ObjectPool.Find(ObjectName);
 
 	if (ObjectFromPool == nullptr) return nullptr;
@@ -57,13 +72,6 @@ UObject* APoolHolder::GetSpecificAndSetActive(FString ObjectName) {
 	SetObjectActive(UnusedObject);
 
 	return UnusedObject;
-}
-
-UObject* APoolHolder::GetSpecific(FString ObjectName) {
-	// TODO: Bad performance, find a better way
-	AvailableObjects.Remove(ObjectName);
-
-	return GetSpecificAndSetActive(ObjectName);
 }
 
 void APoolHolder::ReturnObject(UObject* Object) {
@@ -160,6 +168,7 @@ void APoolHolder::InitializePool(FPoolSpecification PoolSpecification) {
 	if (Class) {
 		// Save the default object settings
 		DefaultObjectSettings.bImplementsPoolableInterface = Class->ImplementsInterface(UPoolableInterface::StaticClass());
+		DefaultObjectSettings.Class = Class;
 
 		// Save the default actor settings
 		if (Class->IsChildOf(AActor::StaticClass())) {
