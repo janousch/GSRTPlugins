@@ -5,18 +5,26 @@
 #include "CoreMinimal.h"
 #include "GameFramework/Actor.h"
 #include "Kismet/BlueprintFunctionLibrary.h"
+#include "Runtime/Engine/Classes/Engine/DataTable.h"
 #include "PoolHolder.generated.h"
 
-USTRUCT(BlueprintType, Category = "Object Pool")
-struct FPoolSpecification {
-	GENERATED_BODY()
+USTRUCT(BlueprintType)
+struct FPoolEntry : public FTableRowBase
+{
+	GENERATED_USTRUCT_BODY()
 
 public:
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Meta = (ToolTip = "Any class which inherites from UObject"))
-		TSubclassOf<UObject> Class;
 
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Meta = (ToolTip = "The number of objects you want to have inside the pool"))
-		int32 NumberOfObjects;
+	FPoolEntry()
+		: Class(UObject::StaticClass())
+		, AmountOfObjects(100)
+	{}
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Object Pool")
+		UClass* Class;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Object Pool", Meta = (ToolTip = "The number of objects you want to have inside the pool"))
+		int32 AmountOfObjects;
 };
 
 // Used to remember the default object settings
@@ -102,7 +110,7 @@ public:
 	void ReturnObject(UObject* Object);
 
 	// Initialize the pool with a given class and the amount of objects that the pool will contain
-	void InitializePool(FPoolSpecification PoolSpecification);
+	void InitializePool(FPoolEntry PoolEntry);
 
 	bool IsObjectAvailable(UObject* Object);
 

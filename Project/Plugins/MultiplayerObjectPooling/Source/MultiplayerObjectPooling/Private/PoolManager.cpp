@@ -213,8 +213,13 @@ AActor* APoolManager::SpawnActorFromPool(TSubclassOf<AActor> Class, FTransform S
 void APoolManager::InitializePools() {
 	DestroyAllPools();
 
-	for (auto& PoolSpecification : DesiredPools) {
-		InitializeObjectPool(PoolSpecification);
+	FString Context;
+	TArray<FPoolEntry*> PoolEntries;
+	DataTable->GetAllRows<FPoolEntry>(Context, PoolEntries);
+
+	for (auto& PoolEntry : PoolEntries) {
+		FPoolEntry Entry = *PoolEntry;
+		InitializeObjectPool(Entry);
 	}
 
 	bIsReady = true;
@@ -243,7 +248,7 @@ void APoolManager::EmptyObjectPool(TSubclassOf<UObject> Class) {
 	}
 }
 
-void APoolManager::InitializeObjectPool(FPoolSpecification PoolSpecification) {
+void APoolManager::InitializeObjectPool(FPoolEntry PoolEntry) {
 	if (!IsValid(Instance)) {
 		UE_LOG(LogTemp, Error, TEXT("Please spawn a PoolManager"));
 		return;
@@ -252,8 +257,8 @@ void APoolManager::InitializeObjectPool(FPoolSpecification PoolSpecification) {
 	APoolHolder* PoolHolder = Instance->GetWorld()->SpawnActor<APoolHolder>(APoolHolder::StaticClass(), Instance->GetTransform());
 	PoolHolder->AttachToActor(Instance, FAttachmentTransformRules::KeepWorldTransform);
 
-	PoolHolder->InitializePool(PoolSpecification);
-	Instance->ClassNamesToPools.Add(PoolSpecification.Class->GetName(), PoolHolder);
+	PoolHolder->InitializePool(PoolEntry);
+	Instance->ClassNamesToPools.Add(PoolEntry.Class->GetName(), PoolHolder);
 }
 
 FString APoolManager::GetObjectName(UObject* Object) {

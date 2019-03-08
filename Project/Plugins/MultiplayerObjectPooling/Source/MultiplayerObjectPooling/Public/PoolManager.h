@@ -5,6 +5,7 @@
 #include "CoreMinimal.h"
 #include "GameFramework/Actor.h"
 #include "PoolHolder.h"
+#include "Runtime/Engine/Classes/Engine/DataTable.h"
 #include "PoolManager.generated.h"
 
 
@@ -46,10 +47,10 @@ struct FSpecificSearch {
 
 public:
 
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Meta = (ToolTip = "Set an specific actor name to spawn from the pool", EditCondition = "bSearchSpecificActor"))
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Meta = (ToolTip = "Set an specific actor name to spawn from the pool"))
 		FString SpecificActor = "";
 
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Meta = (ToolTip = "What has to happen when the specified actor can't be found?", EditCondition = "bSearchSpecificActor"))
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Meta = (ToolTip = "What has to happen when the specified actor can't be found?"))
 		EHandleNoSpecificFound HandleNoSpecificFound = EHandleNoSpecificFound::NEXT_FREE;
 };
 
@@ -97,9 +98,6 @@ public:
 	//UFUNCTION(BlueprintCallable, Category = "Object Pool", Meta = (ToolTip = "Clear a specific pool", Keywords = "Empty Clear Pool Destroy"))
 		static void EmptyObjectPool(TSubclassOf<UObject> Class);
 
-	//UFUNCTION(BlueprintCallable, Category = "Object Pool", Meta = (ToolTip = "Create a new object pool. If you pass a class with an existing pool this will destroy all elements of the existing pool!", Keywords = "Init Create Start Pool"))
-		//static void InitializeObjectPool(FPoolSpecification PoolSpecification);
-
 	//UFUNCTION(BlueprintPure, Category = "Object Pool", Meta = (ToolTip = "Get the amount of used objects of the pool"))
 		static int32 GetNumberOfUsedObjects(TSubclassOf<UObject> Class);
 
@@ -134,14 +132,14 @@ protected:
 	
 private:
 
-	UPROPERTY(EditAnywhere)
-		TArray<FPoolSpecification> DesiredPools;
+	UPROPERTY(EditInstanceOnly, Meta = (ToolTip = "The desired pools. The PoolManager will create these pools on BeginPlay! (Create a data table with the struct PoolEntry)"))
+		UDataTable* DataTable;
 
 	bool bIsReady = false;
 
 	void DestroyAllPools();
 
-	static void InitializeObjectPool(FPoolSpecification PoolSpecification);
+	static void InitializeObjectPool(FPoolEntry PoolEntry);
 
 	/*
 	* Return false if the PoolManager doesn't contain the specific poolholder

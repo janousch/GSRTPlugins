@@ -27,8 +27,7 @@ void APoolHolder::Add(UObject* Object) {
 
 UObject* APoolHolder::GetUnused() {
 	if (AvailableObjects.Num() > 0) {
-		UObject* UnusedObject = GetSpecific(AvailableObjects[0]);
-		AvailableObjects.RemoveAt(0);
+		UObject* UnusedObject = GetSpecific(AvailableObjects.Pop(true));	
 
 		return UnusedObject;
 	}
@@ -160,10 +159,10 @@ void APoolHolder::RestoreActorSettings(AActor* Actor) {
 	}
 }
 
-void APoolHolder::InitializePool(FPoolSpecification PoolSpecification) {
+void APoolHolder::InitializePool(FPoolEntry PoolEntry) {
 	bIsPoolHolderInitialized = false;
-	TSubclassOf<UObject> Class = PoolSpecification.Class;
-	int32 NumberOfObjects = PoolSpecification.NumberOfObjects;
+	TSubclassOf<UObject> Class = PoolEntry.Class;
+	int32 NumberOfObjects = PoolEntry.AmountOfObjects;
 
 	if (Class) {
 		// Save the default object settings
