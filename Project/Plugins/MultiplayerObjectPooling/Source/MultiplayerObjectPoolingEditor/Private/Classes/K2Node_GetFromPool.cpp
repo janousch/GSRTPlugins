@@ -114,12 +114,11 @@ void UK2Node_GetFromPool::AllocateDefaultPins()
 	}///
 
 	 /// Class Pin.
-	//UEdGraphPin* ClassPin = CreatePin(EGPD_Input, K2Schema->PC_Object, TEXT(""), UObject::StaticClass(), false, false, FK2Node_GetFromPoolHelper::ClassPinName);
-	UEdGraphPin* ClassPin = CreatePin(EGPD_Input, UEdGraphSchema_K2::PC_Class, TEXT("self"), UObject::StaticClass(), false, false, FK2Node_GetFromPoolHelper::ClassPinName);
+	UEdGraphPin* ClassPin = CreatePin(EGPD_Input, UEdGraphSchema_K2::PC_Class, TEXT("self"), AActor::StaticClass(), false, false, FK2Node_GetFromPoolHelper::ClassPinName);
 
 	/// Owner Pin.
-	UEdGraphPin* OwnerPin = CreatePin(EGPD_Input, K2Schema->PC_Object, TEXT(""), AActor::StaticClass(), false, false, FK2Node_GetFromPoolHelper::OwnerPinName);
-	OwnerPin->bAdvancedView = true;
+	//UEdGraphPin* OwnerPin = CreatePin(EGPD_Input, K2Schema->PC_Object, TEXT(""), AActor::StaticClass(), false, false, FK2Node_GetFromPoolHelper::OwnerPinName);
+	//OwnerPin->bAdvancedView = true;
 
 	/// Collision Handling Pin.
 	UEnum* const MethodEnum = FindObjectChecked<UEnum>(ANY_PACKAGE, TEXT("ESpawnActorCollisionHandlingMethod"), true);
@@ -140,12 +139,12 @@ void UK2Node_GetFromPool::AllocateDefaultPins()
 	UEdGraphPin* SuccessPin = CreatePin(EGPD_Output, K2Schema->PC_Boolean, TEXT(""), nullptr, false, false, FK2Node_GetFromPoolHelper::SuccessPinName);
 
 	/// Result Pin.
-	//UEdGraphPin* ResultPin = CreatePin(EGPD_Output, K2Schema->PC_Object, TEXT(""), APooledActor::StaticClass(), false, false, K2Schema->PN_ReturnValue);
-	UEdGraphPin* ResultPin = CreatePin(EGPD_Output, K2Schema->PC_Object, TEXT(""), UObject::StaticClass(), false, false, K2Schema->PN_ReturnValue);
+	UEdGraphPin* ResultPin = CreatePin(EGPD_Output, K2Schema->PC_Object, TEXT(""), AActor::StaticClass(), false, false, K2Schema->PN_ReturnValue);
 
 	if (ENodeAdvancedPins::NoPins == AdvancedPinDisplay) {
 		AdvancedPinDisplay = ENodeAdvancedPins::Hidden;
-	} Super::AllocateDefaultPins();
+	} 
+	Super::AllocateDefaultPins();
 }
 
 UClass* UK2Node_GetFromPool::GetClassToSpawn(const TArray<UEdGraphPin*>* InPinsToSearch) const {
@@ -166,7 +165,7 @@ bool UK2Node_GetFromPool::IsClassPinValid() const {
 	if (ClassPin) {
 		if (ClassPin->DefaultObject) {
 			UClass* SpawnClass = Cast<UClass>(ClassPin->DefaultObject);
-			if (SpawnClass != NULL && SpawnClass != UObject::StaticClass()) {
+			if (SpawnClass != NULL && SpawnClass != AActor::StaticClass()) {
 				return true;
 			}
 		}
@@ -177,7 +176,7 @@ bool UK2Node_GetFromPool::IsClassPinValid() const {
 
 void UK2Node_GetFromPool::CreatePinsForClass(UClass* InClass, TArray<UEdGraphPin*> &OutClassPins) {
 	check(InClass != NULL);
-
+	
 	const UEdGraphSchema_K2* K2Schema = GetDefault<UEdGraphSchema_K2>();
 	const UObject* const ClassDefaultObject = InClass->GetDefaultObject(false);
 
@@ -189,7 +188,6 @@ void UK2Node_GetFromPool::CreatePinsForClass(UClass* InClass, TArray<UEdGraphPin
 		const bool IsSettableExternally = !Property->HasAnyPropertyFlags(CPF_DisableEditOnInstance);
 
 		if (IsExposedToSpawn && !Property->HasAnyPropertyFlags(CPF_Parm) && IsSettableExternally && Property->HasAllPropertyFlags(CPF_BlueprintVisible) && !IsDelegate && (FindPin(Property->GetName()) == NULL)) {
-			//UE_LOG(LogTemp, Warning, TEXT("Property: %s"), *Property->GetName());
 			UEdGraphPin* Pin = CreatePin(EGPD_Input, TEXT(""), TEXT(""), NULL, false, false, Property->GetName());
 			const bool bPinGood = (Pin != NULL) && K2Schema->ConvertPropertyToPinType(Property, Pin->PinType);
 			OutClassPins.Add(Pin);
@@ -292,99 +290,95 @@ void UK2Node_GetFromPool::OnClassPinChanged() {
 }
 
 void UK2Node_GetFromPool::PinConnectionListChanged(UEdGraphPin* ChangedPin) {
-	if (ChangedPin && (ChangedPin->PinName == FK2Node_GetFromPoolHelper::ClassPinName)) { OnClassPinChanged(); }
+	if (ChangedPin && (ChangedPin->PinName == FK2Node_GetFromPoolHelper::ClassPinName)) {
+		OnClassPinChanged(); 
+	}
+	
 }
 
 void UK2Node_GetFromPool::PinDefaultValueChanged(UEdGraphPin* ChangedPin) {
-	if (ChangedPin && (ChangedPin->PinName == FK2Node_GetFromPoolHelper::ClassPinName)) { OnClassPinChanged(); }
+	if (ChangedPin && (ChangedPin->PinName == FK2Node_GetFromPoolHelper::ClassPinName)) { 
+		OnClassPinChanged(); 
+	}
 }
 
 void UK2Node_GetFromPool::ExpandNode(class FKismetCompilerContext &CompilerContext, UEdGraph* SourceGraph) {
 	Super::ExpandNode(CompilerContext, SourceGraph);
 
-	/*
+	static FName BeginSpawningBlueprintFuncName = GET_FUNCTION_NAME_CHECKED(APoolManager, BeginDeferredSpawnFromPool);
+	static FName FinishSpawningFuncName = GET_FUNCTION_NAME_CHECKED(APoolManager, FinishDeferredSpawnFromPool);
 
-	//
-	//static FName BeginSpawningBlueprintFuncName = GET_FUNCTION_NAME_CHECKED(UObjectPool, BeginDeferredSpawnFromPool);
-	//static FName FinishSpawningFuncName = GET_FUNCTION_NAME_CHECKED(UObjectPool, FinishDeferredSpawnFromPool);
-	static FName SpawningFuncName = GET_FUNCTION_NAME_CHECKED(APoolManager, GetFromPool);
-	//
 	UK2Node_GetFromPool* SpawnNode = this;
 	UEdGraphPin* SpawnClassPin = SpawnNode->GetClassPin();
 	UEdGraphPin* SpawnNodeExec = SpawnNode->GetExecPin();
 	UEdGraphPin* SpawnNodeThen = SpawnNode->GetThenPin();
 	UEdGraphPin* SpawnNodeResult = SpawnNode->GetResultPin();
 	UEdGraphPin* SpawnSuccessPin = SpawnNode->GetSuccessPin();
-	UEdGraphPin* SpawnNodeOwnerPin = SpawnNode->GetOwnerPin();
-	UEdGraphPin* SpawnNodeOptions = SpawnNode->GetSpawnOptionsPin();
+	//UEdGraphPin* SpawnNodeOwnerPin = SpawnNode->GetOwnerPin();
+	//UEdGraphPin* SpawnNodeOptions = SpawnNode->GetSpawnOptionsPin();
 	UEdGraphPin* SpawnWorldContextPin = SpawnNode->GetWorldContextPin();
 	UEdGraphPin* SpawnNodeTransform = SpawnNode->GetSpawnTransformPin();
 	UEdGraphPin* SpawnNodeReconstructPin = SpawnNode->GetReconstructPin();
 	UEdGraphPin* SpawnNodeCollisionHandlingOverride = GetCollisionHandlingOverridePin();
-	//
-	//
+
 	UClass* ClassToSpawn = GetClassToSpawn();
-	//
-	if (!SpawnClassPin || (SpawnClassPin->LinkedTo.Num() == 0)) {
-		CompilerContext.MessageLog.Error(*LOCTEXT("SpawnActorFromPool_Pool_Error", "Spawn Node: @@ must have an @@ specified!").ToString(), SpawnNode, SpawnClassPin);
+	if (!SpawnClassPin) {
+		CompilerContext.MessageLog.Error(*LOCTEXT("SpawnActorFromPool_Pool_Error", "Spawn Node: @@ must have a @@ specified!").ToString(), SpawnNode, SpawnClassPin);
 		SpawnNode->BreakAllNodeLinks();
 		return;
 	}
-	//
-	//
+
+
 	UK2Node_CallFunction* CallBeginSpawnNode = CompilerContext.SpawnIntermediateNode<UK2Node_CallFunction>(SpawnNode, SourceGraph);
-	//CallBeginSpawnNode->FunctionReference.SetExternalMember(BeginSpawningBlueprintFuncName, UObjectPool::StaticClass());
-	CallBeginSpawnNode->FunctionReference.SetExternalMember(BeginSpawningBlueprintFuncName, UObject::StaticClass());
+	CallBeginSpawnNode->FunctionReference.SetExternalMember(BeginSpawningBlueprintFuncName, APoolManager::StaticClass());
 	CallBeginSpawnNode->AllocateDefaultPins();
-	//
+
 	UEdGraphPin* CallBeginExec = CallBeginSpawnNode->GetExecPin();
 	UEdGraphPin* CallBeginResult = CallBeginSpawnNode->GetReturnValuePin();
-	UEdGraphPin* CallBeginOwnerPin = CallBeginSpawnNode->FindPinChecked(FK2Node_GetFromPoolHelper::OwnerPinName);
+	//UEdGraphPin* CallBeginOwnerPin = CallBeginSpawnNode->FindPinChecked(FK2Node_GetFromPoolHelper::OwnerPinName);
 	UEdGraphPin* CallBeginActorClassPin = CallBeginSpawnNode->FindPinChecked(FK2Node_GetFromPoolHelper::ClassPinName);
 	UEdGraphPin* CallBeginSuccessPin = CallBeginSpawnNode->FindPinChecked(FK2Node_GetFromPoolHelper::SuccessPinName);
-	UEdGraphPin* CallBeginOptions = CallBeginSpawnNode->FindPinChecked(FK2Node_GetFromPoolHelper::SpawnOptionsPinName);
+	//UEdGraphPin* CallBeginOptions = CallBeginSpawnNode->FindPinChecked(FK2Node_GetFromPoolHelper::SpawnOptionsPinName);
 	UEdGraphPin* CallBeginTransform = CallBeginSpawnNode->FindPinChecked(FK2Node_GetFromPoolHelper::SpawnTransformPinName);
 	UEdGraphPin* CallBeginReconstructPin = CallBeginSpawnNode->FindPinChecked(FK2Node_GetFromPoolHelper::ReconstructPinName);
 	UEdGraphPin* CallBeginWorldContextPin = CallBeginSpawnNode->FindPinChecked(FK2Node_GetFromPoolHelper::WorldContextPinName);
 	UEdGraphPin* CallBeginCollisionHandlingOverride = CallBeginSpawnNode->FindPinChecked(FK2Node_GetFromPoolHelper::CollisionHandlingOverridePinName);
-	//
+
 	CompilerContext.MovePinLinksToIntermediate(*SpawnNodeExec, *CallBeginExec);
 	CompilerContext.MovePinLinksToIntermediate(*SpawnClassPin, *CallBeginActorClassPin);
-	CompilerContext.MovePinLinksToIntermediate(*SpawnNodeOptions, *CallBeginOptions);
+	//CompilerContext.MovePinLinksToIntermediate(*SpawnNodeOptions, *CallBeginOptions);
 	CompilerContext.MovePinLinksToIntermediate(*SpawnSuccessPin, *CallBeginSuccessPin);
 	CompilerContext.MovePinLinksToIntermediate(*SpawnNodeTransform, *CallBeginTransform);
 	CompilerContext.MovePinLinksToIntermediate(*SpawnNodeReconstructPin, *CallBeginReconstructPin);
 	CompilerContext.MovePinLinksToIntermediate(*SpawnNodeCollisionHandlingOverride, *CallBeginCollisionHandlingOverride);
-	//
+
 	if (SpawnWorldContextPin) { CompilerContext.MovePinLinksToIntermediate(*SpawnWorldContextPin, *CallBeginWorldContextPin); }
-	if (SpawnNodeOwnerPin != nullptr) { CompilerContext.MovePinLinksToIntermediate(*SpawnNodeOwnerPin, *CallBeginOwnerPin); }
-	//
-	//
+	//if (SpawnNodeOwnerPin != nullptr) { CompilerContext.MovePinLinksToIntermediate(*SpawnNodeOwnerPin, *CallBeginOwnerPin); }
+
+
 	UK2Node_CallFunction* CallFinishSpawnNode = CompilerContext.SpawnIntermediateNode<UK2Node_CallFunction>(SpawnNode, SourceGraph);
-	//CallFinishSpawnNode->FunctionReference.SetExternalMember(FinishSpawningFuncName, UObjectPool::StaticClass());
-	CallFinishSpawnNode->FunctionReference.SetExternalMember(FinishSpawningFuncName, UObject::StaticClass());
+	CallFinishSpawnNode->FunctionReference.SetExternalMember(FinishSpawningFuncName, APoolManager::StaticClass());
 	CallFinishSpawnNode->AllocateDefaultPins();
-	//
+
 	UEdGraphPin* CallFinishExec = CallFinishSpawnNode->GetExecPin();
 	UEdGraphPin* CallFinishThen = CallFinishSpawnNode->GetThenPin();
 	UEdGraphPin* CallFinishResult = CallFinishSpawnNode->GetReturnValuePin();
+	//UEdGraphPin* CallFinishClass = CallFinishSpawnNode->FindPinChecked(FK2Node_GetFromPoolHelper::ClassPinName);
 	UEdGraphPin* CallFinishActor = CallFinishSpawnNode->FindPinChecked(FK2Node_GetFromPoolHelper::ActorPinName);
 	UEdGraphPin* CallFinishTransform = CallFinishSpawnNode->FindPinChecked(FK2Node_GetFromPoolHelper::SpawnTransformPinName);
-	//
+
 	CompilerContext.MovePinLinksToIntermediate(*SpawnNodeThen, *CallFinishThen);
 	CompilerContext.CopyPinLinksToIntermediate(*CallBeginTransform, *CallFinishTransform);
-	//
+
 	CallBeginResult->MakeLinkTo(CallFinishActor);
 	CallFinishResult->PinType = SpawnNodeResult->PinType;
 	CompilerContext.MovePinLinksToIntermediate(*SpawnNodeResult, *CallFinishResult);
-	//
-	//
+
+
 	UEdGraphPin* LastThen = FKismetCompilerUtilities::GenerateAssignmentNodes(CompilerContext, SourceGraph, CallBeginSpawnNode, SpawnNode, CallBeginResult, ClassToSpawn);
 	LastThen->MakeLinkTo(CallFinishExec);
-	//
-	SpawnNode->BreakAllNodeLinks();
 
-	*/
+	SpawnNode->BreakAllNodeLinks();
 }
 
 UEdGraphPin* UK2Node_GetFromPool::GetThenPin() const {

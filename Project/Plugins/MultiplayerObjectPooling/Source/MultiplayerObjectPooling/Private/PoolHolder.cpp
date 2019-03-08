@@ -66,14 +66,14 @@ UObject* APoolHolder::GetSpecific(FString ObjectName) {
 	return GetSpecificAndSetActive(ObjectName);
 }
 
-void APoolHolder::ReturnObject(UObject* Object, const EEndPlayReason::Type EndPlayReason) {
+void APoolHolder::ReturnObject(UObject* Object) {
 	FString ObjectName = Object->GetName();
 	AvailableObjects.Add(ObjectName);
 
-	SetObjectActive(Object, false, EndPlayReason);
+	SetObjectActive(Object, false);
 }
 
-void APoolHolder::SetObjectActive(UObject* Object, bool bIsActive, const EEndPlayReason::Type EndPlayReason) {
+void APoolHolder::SetObjectActive(UObject* Object, bool bIsActive) {
 	if (!Object->IsValidLowLevelFast()) return;
 
 	if (DefaultObjectSettings.bIsActor) {
@@ -98,7 +98,7 @@ void APoolHolder::SetObjectActive(UObject* Object, bool bIsActive, const EEndPla
 			IPoolableInterface::Execute_PoolableBeginPlay(Object);
 		}
 		else {
-			IPoolableInterface::Execute_PoolableEndPlay(Object, EndPlayReason);
+			IPoolableInterface::Execute_PoolableEndPlay(Object);
 		}
 	}
 }
@@ -110,7 +110,7 @@ void APoolHolder::RestoreActorSettings(AActor* Actor) {
 	if (DefaultObjectSettings.LifeSpan > 0) {
 		FTimerHandle* Timer = ObjectsToTimers.Find(Actor);
 		FTimerDelegate TimerDel;
-		TimerDel.BindUFunction(this, FName("ReturnObject"), Actor, EEndPlayReason::Destroyed);
+		TimerDel.BindUFunction(this, FName("ReturnObject"), Actor);
 		GetWorldTimerManager().SetTimer(*Timer, TimerDel, DefaultObjectSettings.LifeSpan, false);
 	}
 

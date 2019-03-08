@@ -14,18 +14,18 @@
 	#include "Textures/SlateIcon.h"
 #endif
 
+#include "PoolManager.h"
+
 #include "K2Node_GetFromPool.generated.h"
 
 class FBlueprintActionDatabaseRegistrar;
 class UEdGraph;
+class APoolManager;
 
-//UCLASS(MinimalAPI)
 UCLASS()
 class UK2Node_GetFromPool : public UK2Node
 {
 	GENERATED_UCLASS_BODY()
-	//GENERATED_BODY()
-
 
 public:
 
@@ -46,15 +46,15 @@ public:
 	virtual bool HasExternalDependencies(TArray<class UStruct*>* OptionalOutput) const override;
 	virtual void PinDefaultValueChanged(UEdGraphPin* Pin) override;
 	virtual bool IsCompatibleWithGraph(const UEdGraph* TargetGraph) const override;
-	//
+
 	virtual bool IsNodeSafeToIgnore() const override { return true; }
 	virtual void ReallocatePinsDuringReconstruction(TArray<UEdGraphPin*> &OldPins) override;
 	virtual void GetNodeAttributes(TArray<TKeyValuePair<FString, FString>> &OutNodeAttributes) const override;
-	//
+
 	bool IsSpawnVarPin(UEdGraphPin* Pin);
 	void CreatePinsForClass(UClass* InClass, TArray<UEdGraphPin*> &OutClassPins);
 	bool IsClassPinValid() const;
-	//
+
 	UEdGraphPin* GetThenPin() const;
 	UEdGraphPin* GetResultPin() const;
 	UEdGraphPin* GetOwnerPin() const;

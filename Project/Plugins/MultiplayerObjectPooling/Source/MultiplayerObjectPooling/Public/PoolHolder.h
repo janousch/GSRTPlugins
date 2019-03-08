@@ -95,7 +95,7 @@ public:
 
 	// Return an object to the pool
 	UFUNCTION()
-	void ReturnObject(UObject* Object, const EEndPlayReason::Type EndPlayReason);
+	void ReturnObject(UObject* Object);
 
 	// Initialize the pool with a given class and the amount of objects that the pool will contain
 	void InitializePool(FPoolSpecification PoolSpecification);
@@ -103,6 +103,13 @@ public:
 	bool IsObjectAvailable(UObject* Object);
 
 	virtual void Destroyed() override;
+
+	/*
+	* Activate or deactivate the object. On activation it will restore the default values
+	* @param Object
+	* @param bIsActive
+	*/
+	void SetObjectActive(UObject* Object, bool bIsActive = true);
 
 private:
 
@@ -125,14 +132,6 @@ private:
 
 	// Necessary for the objects which are getting deactivated but don't call the interface function PoolableEndPlay
 	bool bIsPoolHolderInitialized = false;
-	
-	/* 
-	* Activate or deactivate the object. On activation it will restore the default values
-	* @param Object
-	* @param bIsActive
-	* @param EndPlayReason - will be passed to the EndPlay Interface function if implemented
-	*/
-	void SetObjectActive(UObject* Object, bool bIsActive = true, const EEndPlayReason::Type EndPlayReason = EEndPlayReason::Destroyed);
 
 	/*
 	* Get the specific object, set it active but don't remove it from the AvailableObjects array.

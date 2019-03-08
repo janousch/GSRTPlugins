@@ -31,7 +31,7 @@ namespace UnrealBuildTool.Rules
 					"EditorStyle",
 					"AIModule",
 					"BlueprintGraph",
-					"MultiplayerObjectPooling",
+					"MultiplayerObjectPooling"
 				}
 			);
 
@@ -45,7 +45,7 @@ namespace UnrealBuildTool.Rules
 					"SlateCore",
                     "Kismet",
                     "KismetWidgets",
-                    "PropertyEditor",
+                    "PropertyEditor"
                 }
 			);
 		}
