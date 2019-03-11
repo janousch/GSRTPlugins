@@ -20,8 +20,8 @@ APoolManager::APoolManager()
 // Called when the game starts or when spawned
 void APoolManager::BeginPlay()
 {
-	Instance = this;
 	Super::BeginPlay();
+	Instance = this;
 	InitializePools();
 }
 
@@ -137,11 +137,16 @@ UObject* APoolManager::GetFromPool(TSubclassOf<UObject> Class, FSpawnParameter S
 
 bool APoolManager::GetPoolHolder(TSubclassOf<UObject> Class, APoolHolder*& PoolHolder) {
 	if (Class) {
+		UE_LOG(LogTemp, Error, TEXT("140"));
 		if (IsPoolManagerReady()) {
+			UE_LOG(LogTemp, Error, TEXT("142"));
 			FString Key = Class->GetName();
 			if (Instance->ClassNamesToPools.Contains(Key)) {
 				PoolHolder = *Instance->ClassNamesToPools.Find(Key);
 				return true;
+			}
+			else {
+				UE_LOG(LogTemp, Error, TEXT("Pool Manager doesn't contain the class %s!"), *Key);
 			}
 		}
 
@@ -315,6 +320,8 @@ bool APoolManager::ContainsClass(TSubclassOf<UObject> Class) {
 }
 
 void APoolManager::DestroyAllPools() {
+	if (!IsPoolManagerReady()) return;
+
 	TArray<APoolHolder*> Pools;
 	ClassNamesToPools.GenerateValueArray(Pools);
 
@@ -330,9 +337,20 @@ void APoolManager::DestroyAllPools() {
 }
 
 bool APoolManager::IsPoolManagerReady() {
-	if (!IsValid(Instance)) return false;
+	UE_LOG(LogTemp, Error, TEXT("336"));
+	if (Instance == nullptr) return false;
+	UE_LOG(LogTemp, Error, TEXT("338"));
+	if (!Instance->IsValidLowLevelFast()) return false;
+	UE_LOG(LogTemp, Error, TEXT("340"));
 	if (Instance->ClassNamesToPools.Num() == 0) return false;
+	UE_LOG(LogTemp, Error, TEXT("342"));
 	if (!Instance->bIsReady) return false;
+	UE_LOG(LogTemp, Error, TEXT("344"));
 
 	return true;
+}
+
+void APoolManager::EndPlay(const EEndPlayReason::Type EndPlayReason) {
+	DestroyAllPools();
+	Super::EndPlay(EndPlayReason);
 }

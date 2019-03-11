@@ -92,6 +92,7 @@ void APoolHolder::SetObjectActive(UObject* Object, bool bIsActive) {
 			Actor->DetachFromActor(FDetachmentTransformRules::KeepWorldTransform);
 		}
 		else {
+			UE_LOG(LogTemp, Error, TEXT("PoolHolder line 95 %s"), bIsActive ? "true" : "false");
 			Actor->AttachToActor(this, FAttachmentTransformRules::KeepRelativeTransform);
 		}
 
@@ -116,7 +117,8 @@ void APoolHolder::RestoreActorSettings(AActor* Actor) {
 	Actor->bCanBeDamaged = DefaultObjectSettings.bCanBeDamaged;
 	if (DefaultObjectSettings.LifeSpan > 0) {
 		FTimerHandle* Timer = ObjectsToTimers.Find(Actor);
-		FTimerDelegate TimerDel;
+		FTimerDelegate TimerDel; 
+		UE_LOG(LogTemp, Error, TEXT("PoolHolder line 121"));
 		TimerDel.BindUFunction(this, FName("ReturnObject"), Actor);
 		GetWorldTimerManager().SetTimer(*Timer, TimerDel, DefaultObjectSettings.LifeSpan, false);
 	}
