@@ -69,7 +69,7 @@ public:
 	UPROPERTY(BlueprintAssignable)
 		FInitializedPoolManager OnInitialized;
 
-	TMap<FString, APoolHolder*> ClassNamesToPools;
+	TMap<FString, APoolHolder*> ClassNamesToPools = TMap<FString, APoolHolder*>();
 
 	// Sets default values for this actor's properties
 	APoolManager();
@@ -141,12 +141,12 @@ private:
 
 	void DestroyAllPools();
 
-	static void InitializeObjectPool(FPoolEntry PoolEntry);
+	void InitializeObjectPool(FPoolEntry PoolEntry);
 
 	/*
 	* Return false if the PoolManager doesn't contain the specific poolholder
 	*/
-	static bool GetPoolHolder(TSubclassOf<UObject> Class, APoolHolder*& PoolHolder);
+	bool GetPoolHolder(TSubclassOf<UObject> Class, APoolHolder*& PoolHolder);
 
 	static bool IsPoolManagerReady();
 };

@@ -30,7 +30,7 @@ APoolManager* APoolManager::GetPoolManager() {
 }
 
 AActor* APoolManager::BeginDeferredSpawnFromPool(const UObject* WorldContextObject, UClass* Class, const FTransform& SpawnTransform, ESpawnActorCollisionHandlingMethod CollisionHandlingOverride, const bool Reconstruct, bool &SpawnSuccessful) {
-	//if (!ObjectPool->IsValidLowLevelFast() || ObjectPool->IsPendingKill()) {
+	//if (!ObjectPool->IsValidLowLevel() || ObjectPool->IsPendingKill()) {
 	if (!Class) {
 		return nullptr; 
 	}
@@ -85,7 +85,7 @@ AActor* APoolManager::BeginDeferredSpawnFromPool(const UObject* WorldContextObje
 
 
 AActor* APoolManager::FinishDeferredSpawnFromPool(AActor* Actor, const FTransform& SpawnTransform) {
-	if (Actor->IsValidLowLevelFast() && !Actor->IsActorInitialized() && !Actor->IsPendingKill()) {
+	if (Actor->IsValidLowLevel() && !Actor->IsActorInitialized() && !Actor->IsPendingKill()) {
 		Actor->FinishSpawning(SpawnTransform);
 	} return Actor;
 }
@@ -93,8 +93,8 @@ AActor* APoolManager::FinishDeferredSpawnFromPool(AActor* Actor, const FTransfor
 
 UObject* APoolManager::GetFromPool(TSubclassOf<UObject> Class, FSpawnParameter SpawnParameter, FSpecificSearch SpecificSearch) {
 	APoolHolder* PoolHolder;
-	if (GetPoolHolder(Class, PoolHolder)) {
-		if (PoolHolder->IsValidLowLevelFast()) {
+	if (Instance->GetPoolHolder(Class, PoolHolder)) {
+		if (PoolHolder->IsValidLowLevel()) {
 			FString SpecificActor = SpecificSearch.SpecificActor;
 			bool bReturnSpecificActor = SpecificActor.Len() > 0;
 
@@ -102,7 +102,7 @@ UObject* APoolManager::GetFromPool(TSubclassOf<UObject> Class, FSpawnParameter S
 			if (bReturnSpecificActor) {
 				UnusedObject = PoolHolder->GetSpecific(SpecificActor);
 
-				if (SpecificSearch.HandleNoSpecificFound == EHandleNoSpecificFound::NEXT_FREE && !UnusedObject->IsValidLowLevelFast()) {
+				if (SpecificSearch.HandleNoSpecificFound == EHandleNoSpecificFound::NEXT_FREE && !UnusedObject->IsValidLowLevel()) {
 					UnusedObject = PoolHolder->GetUnused();
 				}
 			}
@@ -110,17 +110,17 @@ UObject* APoolManager::GetFromPool(TSubclassOf<UObject> Class, FSpawnParameter S
 				UnusedObject = PoolHolder->GetUnused();
 			}
 
-			if (!UnusedObject->IsValidLowLevelFast()) {
+			if (UnusedObject == nullptr) {
 				if (SpawnParameter.HandleEmptyPool == EHandleEmptyPool::CREATE) {
 					if (Class->IsChildOf(AActor::StaticClass())) {
-						return Instance->GetWorld()->SpawnActor(Class);
+						UnusedObject = Instance->GetWorld()->SpawnActor(Class);
 					}
 					else {
-						return NewObject<UObject>((UObject*)GetTransientPackage(), Class);
+						UnusedObject = NewObject<UObject>((UObject*)GetTransientPackage(), Class);
 					}
 				}
 				else if (SpawnParameter.HandleEmptyPool == EHandleEmptyPool::CREATE_AND_ADD) {
-					return PoolHolder->GetNew();
+					UnusedObject = PoolHolder->GetNew();
 				}
 			}
 
@@ -137,12 +137,10 @@ UObject* APoolManager::GetFromPool(TSubclassOf<UObject> Class, FSpawnParameter S
 
 bool APoolManager::GetPoolHolder(TSubclassOf<UObject> Class, APoolHolder*& PoolHolder) {
 	if (Class) {
-		UE_LOG(LogTemp, Error, TEXT("140"));
 		if (IsPoolManagerReady()) {
-			UE_LOG(LogTemp, Error, TEXT("142"));
 			FString Key = Class->GetName();
-			if (Instance->ClassNamesToPools.Contains(Key)) {
-				PoolHolder = *Instance->ClassNamesToPools.Find(Key);
+			if (ClassNamesToPools.Contains(Key)) {
+				PoolHolder = *ClassNamesToPools.Find(Key);
 				return true;
 			}
 			else {
@@ -163,7 +161,7 @@ TArray<UObject*> APoolManager::GetXFromPool(TSubclassOf<UObject> Class, int32 Qu
 	TArray<UObject*> Objects;
 	for (int i = 0; i < Quantity; i++) {
 		UObject* Object = GetFromPool(Class, FSpawnParameter(), FSpecificSearch());
-		if (Object->IsValidLowLevelFast()) break;
+		if (Object->IsValidLowLevel()) break;
 		
 		Objects.Add(Object);
 	}
@@ -173,8 +171,8 @@ TArray<UObject*> APoolManager::GetXFromPool(TSubclassOf<UObject> Class, int32 Qu
 
 TArray<UObject*> APoolManager::GetAllFromPool(TSubclassOf<UObject> Class) {
 	APoolHolder* PoolHolder;
-	if (GetPoolHolder(Class, PoolHolder)) {
-		if (PoolHolder->IsValidLowLevelFast()) {
+	if (Instance->GetPoolHolder(Class, PoolHolder)) {
+		if (PoolHolder->IsValidLowLevel()) {
 			return PoolHolder->GetAllUnused();
 		}
 	}
@@ -183,12 +181,13 @@ TArray<UObject*> APoolManager::GetAllFromPool(TSubclassOf<UObject> Class) {
 }
 
 void APoolManager::SetPoolObjectActive(UObject* Object, bool bSetActive) {
-	if (Object->IsValidLowLevelFast()) {
-		APoolHolder* PoolHolder;
-		if (GetPoolHolder(Object->GetClass(), PoolHolder)) {
-			if (PoolHolder->IsValidLowLevelFast()) {
-				PoolHolder->SetObjectActive(Object, bSetActive);
-			}
+	if (!Object->IsValidLowLevel()) return;
+	if (!IsPoolManagerReady()) return;
+
+	APoolHolder* PoolHolder;
+	if (Instance->GetPoolHolder(Object->GetClass(), PoolHolder)) {
+		if (PoolHolder->IsValidLowLevel()) {
+			PoolHolder->SetObjectActive(Object, bSetActive);
 		}
 	}
 }
@@ -197,7 +196,7 @@ AActor* APoolManager::SpawnActorFromPool(TSubclassOf<AActor> Class, FTransform S
 	if (Class) {
 		AActor* UnusedActor = Cast<AActor>(GetFromPool(Class, SpawnParameter, SpecificSearch));
 
-		if (!UnusedActor->IsValidLowLevelFast()) {
+		if (!UnusedActor->IsValidLowLevel()) {
 			Branch = EBranch::Failed;
 			return nullptr;
 		}
@@ -233,7 +232,7 @@ void APoolManager::InitializePools() {
 
 void APoolManager::ReturnToPool(UObject* Object) {
 	APoolHolder* PoolHolder;
-	if (!GetPoolHolder(Object->GetClass(), PoolHolder)) return;
+	if (!Instance->GetPoolHolder(Object->GetClass(), PoolHolder)) return;
 	if (!IsValid(PoolHolder)) return;
 	PoolHolder->ReturnObject(Object);
 }
@@ -254,20 +253,15 @@ void APoolManager::EmptyObjectPool(TSubclassOf<UObject> Class) {
 }
 
 void APoolManager::InitializeObjectPool(FPoolEntry PoolEntry) {
-	if (!IsValid(Instance)) {
-		UE_LOG(LogTemp, Error, TEXT("Please spawn a PoolManager"));
-		return;
-	}
-
-	APoolHolder* PoolHolder = Instance->GetWorld()->SpawnActor<APoolHolder>(APoolHolder::StaticClass(), Instance->GetTransform());
-	PoolHolder->AttachToActor(Instance, FAttachmentTransformRules::KeepWorldTransform);
+	APoolHolder* PoolHolder = GetWorld()->SpawnActor<APoolHolder>(APoolHolder::StaticClass(), GetTransform());
+	PoolHolder->AttachToActor(this, FAttachmentTransformRules::KeepWorldTransform);
 
 	PoolHolder->InitializePool(PoolEntry);
-	Instance->ClassNamesToPools.Add(PoolEntry.Class->GetName(), PoolHolder);
+	ClassNamesToPools.Add(PoolEntry.Class->GetName(), PoolHolder);
 }
 
 FString APoolManager::GetObjectName(UObject* Object) {
-	if (!Object->IsValidLowLevelFast()) return "None";
+	if (!Object->IsValidLowLevel()) return "None";
 
 	FString FullName = Object->GetFullName();
 	FString Path;
@@ -279,7 +273,7 @@ FString APoolManager::GetObjectName(UObject* Object) {
 
 int32 APoolManager::GetNumberOfUsedObjects(TSubclassOf<UObject> Class) {
 	APoolHolder* PoolHolder;
-	if (!GetPoolHolder(Class, PoolHolder)) return -1;
+	if (!Instance->GetPoolHolder(Class, PoolHolder)) return -1;
 	if (!IsValid(PoolHolder)) return -1;
 
 	return PoolHolder->GetNumberOfUsedObjects();
@@ -287,7 +281,7 @@ int32 APoolManager::GetNumberOfUsedObjects(TSubclassOf<UObject> Class) {
 
 int32 APoolManager::GetNumberOfAvailableObjects(TSubclassOf<UObject> Class) {
 	APoolHolder* PoolHolder;
-	if (!GetPoolHolder(Class, PoolHolder)) return -1;
+	if (!Instance->GetPoolHolder(Class, PoolHolder)) return -1;
 	if (!IsValid(PoolHolder)) return -1;
 
 	return PoolHolder->GetNumberOfAvailableObjects();
@@ -295,16 +289,16 @@ int32 APoolManager::GetNumberOfAvailableObjects(TSubclassOf<UObject> Class) {
 
 bool APoolManager::IsObjectActive(UObject* Object) {
 	AActor* Actor = Cast<AActor>(Object);
-	if (Actor->IsValidLowLevelFast()) {
+	if (Actor->IsValidLowLevel()) {
 		AActor* AttachedTo = Actor->GetAttachParentActor();
-		if (AttachedTo->IsValidLowLevelFast()) {
+		if (AttachedTo->IsValidLowLevel()) {
 			return AttachedTo->GetClass()->IsChildOf(APoolHolder::StaticClass());
 		}
 	}
 	else {
 		APoolHolder* PoolHolder;
-		if (GetPoolHolder(Object->GetClass(), PoolHolder)) {
-			if (PoolHolder->IsValidLowLevelFast()) {
+		if (Instance->GetPoolHolder(Object->GetClass(), PoolHolder)) {
+			if (PoolHolder->IsValidLowLevel()) {
 				return !PoolHolder->IsObjectAvailable(Object);
 			}
 		}
@@ -321,31 +315,27 @@ bool APoolManager::ContainsClass(TSubclassOf<UObject> Class) {
 
 void APoolManager::DestroyAllPools() {
 	if (!IsPoolManagerReady()) return;
-
-	TArray<APoolHolder*> Pools;
-	ClassNamesToPools.GenerateValueArray(Pools);
-
-	for (auto& PoolHolder : Pools) {
-		PoolHolder->Destroy();
-	}
-
+	
 	TArray<AActor*> AttachedActors;
 	GetAttachedActors(AttachedActors);
 	for (auto& Actor : AttachedActors) {
 		Actor->Destroy();
 	}
+
+	TArray<APoolHolder*> Pools;
+	ClassNamesToPools.GenerateValueArray(Pools);
+	for (auto& PoolHolder : Pools) {
+		if (!PoolHolder->IsPendingKill()) {
+			PoolHolder->Destroy();
+		}
+	}
 }
 
 bool APoolManager::IsPoolManagerReady() {
-	UE_LOG(LogTemp, Error, TEXT("336"));
 	if (Instance == nullptr) return false;
-	UE_LOG(LogTemp, Error, TEXT("338"));
-	if (!Instance->IsValidLowLevelFast()) return false;
-	UE_LOG(LogTemp, Error, TEXT("340"));
+	if (!Instance->IsValidLowLevel()) return false;
 	if (Instance->ClassNamesToPools.Num() == 0) return false;
-	UE_LOG(LogTemp, Error, TEXT("342"));
 	if (!Instance->bIsReady) return false;
-	UE_LOG(LogTemp, Error, TEXT("344"));
 
 	return true;
 }

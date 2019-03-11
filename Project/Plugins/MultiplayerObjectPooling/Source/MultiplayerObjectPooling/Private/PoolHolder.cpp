@@ -68,8 +68,6 @@ UObject* APoolHolder::GetSpecific(FString ObjectName) {
 
 	UObject* UnusedObject = *ObjectFromPool;
 
-	SetObjectActive(UnusedObject);
-
 	return UnusedObject;
 }
 
@@ -81,7 +79,7 @@ void APoolHolder::ReturnObject(UObject* Object) {
 }
 
 void APoolHolder::SetObjectActive(UObject* Object, bool bIsActive) {
-	if (!Object->IsValidLowLevelFast()) return;
+	if (!IsValid(Object)) return;
 
 	if (DefaultObjectSettings.bIsActor) {
 		AActor* Actor = Cast<AActor>(Object);
@@ -89,11 +87,12 @@ void APoolHolder::SetObjectActive(UObject* Object, bool bIsActive) {
 		// Attach and detach the actor on the pool for better readability inside the editor
 		if (bIsActive) {
 			RestoreActorSettings(Actor);
-			Actor->DetachFromActor(FDetachmentTransformRules::KeepWorldTransform);
+			if (Actor->GetAttachParentActor() == this) {
+				Actor->DetachFromActor(FDetachmentTransformRules::KeepWorldTransform);
+			}
 		}
 		else {
-			UE_LOG(LogTemp, Error, TEXT("PoolHolder line 95 %s"), bIsActive ? "true" : "false");
-			Actor->AttachToActor(this, FAttachmentTransformRules::KeepRelativeTransform);
+			Actor->AttachToActor(this, FAttachmentTransformRules::KeepWorldTransform);
 		}
 
 		Actor->SetActorHiddenInGame(!bIsActive || DefaultObjectSettings.bHiddenInGame);
@@ -117,8 +116,7 @@ void APoolHolder::RestoreActorSettings(AActor* Actor) {
 	Actor->bCanBeDamaged = DefaultObjectSettings.bCanBeDamaged;
 	if (DefaultObjectSettings.LifeSpan > 0) {
 		FTimerHandle* Timer = ObjectsToTimers.Find(Actor);
-		FTimerDelegate TimerDel; 
-		UE_LOG(LogTemp, Error, TEXT("PoolHolder line 121"));
+		FTimerDelegate TimerDel;
 		TimerDel.BindUFunction(this, FName("ReturnObject"), Actor);
 		GetWorldTimerManager().SetTimer(*Timer, TimerDel, DefaultObjectSettings.LifeSpan, false);
 	}
@@ -143,15 +141,17 @@ void APoolHolder::RestoreActorSettings(AActor* Actor) {
 			// Restore scene component settings
 			if (ComponentSettings.bIsSceneComponent) {
 				USceneComponent* SceneComponent = Cast<USceneComponent>(ActorComponent);
-				if (SceneComponent->IsValidLowLevelFast()) {
-					SceneComponent->SetRelativeTransform(ComponentSettings.RelativeTransform, false, nullptr, ETeleportType::TeleportPhysics);
+				if (IsValid(SceneComponent)) {
+					if (i > 0) { // Skip the root transform
+						SceneComponent->SetRelativeTransform(ComponentSettings.RelativeTransform, false, nullptr, ETeleportType::TeleportPhysics);
+					}
 					SceneComponent->SetVisibility(ComponentSettings.bIsVisible);
 					SceneComponent->SetHiddenInGame(ComponentSettings.bIsHidden);
 
 					// Restore static mesh component settings
 					if (ComponentSettings.bIsStaticMeshComponent) {
 						UStaticMeshComponent* StaticMeshComponent = Cast<UStaticMeshComponent>(SceneComponent);
-						if (StaticMeshComponent->IsValidLowLevelFast()) {
+						if (IsValid(StaticMeshComponent)) {
 							StaticMeshComponent->SetSimulatePhysics(ComponentSettings.bIsSimulatingPhysics);
 						}
 					}
@@ -180,7 +180,7 @@ void APoolHolder::InitializePool(FPoolEntry PoolEntry) {
 			DefaultObjectSettings.bHiddenInGame = DefaultActor->bHidden;
 			DefaultObjectSettings.LifeSpan = DefaultActor->InitialLifeSpan;
 			DefaultObjectSettings.bCanBeDamaged = DefaultActor->bCanBeDamaged;
-			
+
 			// Save the default component settings
 			TArray<UActorComponent*> ActorComponents;
 			DefaultActor->GetComponents<UActorComponent>(ActorComponents);
@@ -202,7 +202,7 @@ void APoolHolder::InitializePool(FPoolEntry PoolEntry) {
 
 					// Check for static mesh component settings
 					UStaticMeshComponent* StaticMeshComponent = Cast<UStaticMeshComponent>(ActorComponents[i]);
-					if (StaticMeshComponent->IsValidLowLevelFast()) {
+					if (StaticMeshComponent != nullptr) {
 						DefaultComponentSettings.bIsStaticMeshComponent = true;
 						DefaultComponentSettings.bIsSimulatingPhysics = StaticMeshComponent->IsSimulatingPhysics();
 					}
@@ -211,7 +211,7 @@ void APoolHolder::InitializePool(FPoolEntry PoolEntry) {
 				DefaultComponentsSettings.Add(DefaultComponentSettings);
 			}
 			DefaultActor->Destroy();
-			
+
 			for (int i = 0; i < NumberOfObjects; i++) {
 				AActor* NewActor = GetWorld()->SpawnActor(Class);
 				Add(NewActor);
@@ -245,14 +245,18 @@ void APoolHolder::Destroyed() {
 		ObjectPool.GenerateValueArray(Pool);
 		for (auto& Object : Pool) {
 			AActor* Actor = Cast<AActor>(Object);
-			Actor->Destroy();
+			if (!Actor->IsPendingKill()) {
+				Actor->Destroy();
+			}
 		}
 	}
 
 	TArray<AActor*> AttachedActors;
 	GetAttachedActors(AttachedActors);
 	for (auto& Actor : AttachedActors) {
-		Actor->Destroy();
+		if (!Actor->IsPendingKill()) {
+			Actor->Destroy();
+		}
 	}
 
 	AvailableObjects.Empty();
