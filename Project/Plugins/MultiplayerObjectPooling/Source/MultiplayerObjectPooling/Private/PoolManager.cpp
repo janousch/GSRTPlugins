@@ -145,6 +145,7 @@ bool APoolManager::GetPoolHolder(TSubclassOf<UObject> Class, APoolHolder*& PoolH
 			}
 			else {
 				UE_LOG(LogTemp, Error, TEXT("Pool Manager doesn't contain the class %s!"), *Key);
+				return false;
 			}
 		}
 
