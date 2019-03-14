@@ -30,7 +30,4 @@ public:
 
 	UFUNCTION(BlueprintPure, Category = "GSRT|Helper", Meta = (ToolTip = "Get the object name of the delegate (not the class name!)"))
 		static FString GetDelegateObjectName(FEventName Event);
-
-	UFUNCTION(BlueprintPure, Category = "GSRT|Helper", Meta = (ToolTip = "Check if the event is set to reliable"))
-		static bool IsDelegateReliable(FEventName Event);
 };

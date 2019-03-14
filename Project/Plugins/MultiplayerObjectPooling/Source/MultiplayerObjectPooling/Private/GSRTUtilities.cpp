@@ -24,18 +24,5 @@ FString UGSRTUtilities::GetDelegateName(FEventName Event) {
 
 FString UGSRTUtilities::GetDelegateObjectName(FEventName Event) {
 	
-	return Event.GetUObject()->GetName();
-}
-
-bool UGSRTUtilities::IsDelegateReliable(FEventName Event) {
-	UObject* Object = Event.GetUObject();
-	if (IsValid(Object)) {
-		UFunction* Function = Object->FindFunctionChecked(Event.GetFunctionName());
-		if (IsValid(Function)) {
-			EFunctionFlags FunctionFlags = Function->FunctionFlags;
-			return FunctionFlags == EFunctionFlags::FUNC_NetReliable;
-		}
-	}
-	
-	return false;
+	return GetObjectName(Event.GetUObject());
 }
