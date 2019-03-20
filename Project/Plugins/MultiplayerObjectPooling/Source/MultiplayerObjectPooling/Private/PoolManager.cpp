@@ -293,7 +293,7 @@ bool APoolManager::IsObjectActive(UObject* Object) {
 	if (Actor->IsValidLowLevel()) {
 		AActor* AttachedTo = Actor->GetAttachParentActor();
 		if (AttachedTo->IsValidLowLevel()) {
-			return AttachedTo->GetClass()->IsChildOf(APoolHolder::StaticClass());
+			return !AttachedTo->GetClass()->IsChildOf(APoolHolder::StaticClass());
 		}
 	}
 	else {
