@@ -1,9 +1,9 @@
-// Copyright 2019 (C) Ramón Janousch
+// Copyright 2019 (C) Ramon Janousch
 
 #include "GSRTUtilities.h"
 
 
-UObject* UGSRTUtilities::CreateObject(TSubclassOf<UObject> Class) {
+UObject* UGSRTUtilities::CreateObject(UClass* Class) {
 	return NewObject<UObject>((UObject*)GetTransientPackage(), Class);
 }
 

@@ -18,6 +18,11 @@
 		  "Name": "MultiplayerObjectPooling",
 		  "Type": "Runtime",
 		  "LoadingPhase": "PreDefault"
+	  },
+	  {
+		  "Name": "MultiplayerObjectPoolingEditor",
+		  "Type": "Developer",
+		  "LoadingPhase": "Default"
 	  }
 	]
 }

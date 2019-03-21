@@ -1,4 +1,4 @@
-// Copyright 2019 (C) Ramón Janousch
+// Copyright 2019 (C) Ramon Janousch
 
 #pragma once
 
@@ -20,7 +20,7 @@ class UGSRTUtilities : public UBlueprintFunctionLibrary
 public:
 
 	UFUNCTION(BlueprintPure, Category = "GSRT|Helper", Meta = (ToolTip = "Create a single object", DeterminesOutputType = "Class", Keywords = "Create Object"))
-		static UObject* CreateObject(TSubclassOf<UObject> Class);
+		static UObject* CreateObject(UClass* Class);
 
 	UFUNCTION(BlueprintPure, Category = "GSRT|Helper", Meta = (ToolTip = "Get the name of the object", DefaultToSelf = "Object", Keywords = "Object Pool", DisplayName = "GetName"))
 		static FString GetObjectName(UObject* Object);
