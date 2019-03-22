@@ -295,6 +295,9 @@ bool APoolManager::IsObjectActive(UObject* Object) {
 		if (AttachedTo->IsValidLowLevel()) {
 			return !AttachedTo->GetClass()->IsChildOf(APoolHolder::StaticClass());
 		}
+		else {
+			return true;
+		}
 	}
 	else {
 		APoolHolder* PoolHolder;
